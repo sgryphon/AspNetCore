@@ -6,5 +6,6 @@
   <UsingTask TaskName="RepoTasks.GenerateGuid" AssemblyFile="$(_RepoTaskAssembly)" />
   <UsingTask TaskName="RepoTasks.GetMsiProperty" AssemblyFile="$(_RepoTaskAssembly)" />
   <UsingTask TaskName="RepoTasks.GenerateSharedFrameworkDepsFile" AssemblyFile="$(_RepoTaskAssembly)" />
+  <UsingTask TaskName="RepoTasks.CreateFrameworkListFile" AssemblyFile="$(_RepoTaskAssembly)" />
   <UsingTask TaskName="RepoTasks.RemoveSharedFrameworkDependencies" AssemblyFile="$(_RepoTaskAssembly)" />
 </Project>
