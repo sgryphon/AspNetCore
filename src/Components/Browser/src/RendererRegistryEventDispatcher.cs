@@ -21,9 +21,30 @@ namespace Microsoft.AspNetCore.Components.Browser
         public static Task DispatchEvent(
             BrowserEventDescriptor eventDescriptor, string eventArgsJson)
         {
+            InterpretEventDescriptor(eventDescriptor);
             var eventArgs = ParseEventArgsJson(eventDescriptor.EventArgsType, eventArgsJson);
             var renderer = RendererRegistry.Current.Find(eventDescriptor.BrowserRendererId);
             return renderer.DispatchEventAsync(eventDescriptor.EventHandlerId, eventDescriptor.TreePatchInfo, eventArgs);
+        }
+
+        private static void InterpretEventDescriptor(BrowserEventDescriptor eventDescriptor)
+        {
+            // The incoming attribute value can be either a bool or a string, but since the .NET property
+            // type is 'object', it will deserialize initially as a JsonElement
+            var treePatchInfo = eventDescriptor.TreePatchInfo;
+            if (treePatchInfo != null && treePatchInfo.AttributeValue is JsonElement attributeValueJsonElement)
+            {
+                switch (attributeValueJsonElement.Type)
+                {
+                    case JsonValueType.True:
+                    case JsonValueType.False:
+                        treePatchInfo.AttributeValue = attributeValueJsonElement.GetBoolean();
+                        break;
+                    default:
+                        treePatchInfo.AttributeValue = attributeValueJsonElement.GetString();
+                        break;
+                }
+            }
         }
 
         private static UIEventArgs ParseEventArgsJson(string eventArgsType, string eventArgsJson)

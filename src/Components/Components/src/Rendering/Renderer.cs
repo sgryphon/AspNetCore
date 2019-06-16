@@ -219,6 +219,11 @@ namespace Microsoft.AspNetCore.Components.Rendering
                 throw new ArgumentException($"There is no event handler with ID {eventHandlerId}");
             }
 
+            if (treePatchInfo != null)
+            {
+                UpdateRenderTreeToMatchClientState(eventHandlerId, treePatchInfo, eventArgs);
+            }
+
             Task task = null;
             try
             {
@@ -660,6 +665,16 @@ namespace Microsoft.AspNetCore.Components.Rendering
                     // Ignore errors due to task cancellations.
                     HandleException(ex);
                 }
+            }
+        }
+
+        private void UpdateRenderTreeToMatchClientState(int eventHandlerId, EventTreePatchInfo treePatchInfo, UIEventArgs eventArgs)
+        {
+            var componentState = GetOptionalComponentState(treePatchInfo.ComponentId);
+            if (componentState != null)
+            {
+                var frames = componentState.CurrrentRenderTree.GetFrames();
+                RenderTreeUpdater.UpdateToMatchClientState(frames, eventHandlerId, treePatchInfo.AttributeName, treePatchInfo.AttributeValue);
             }
         }
 

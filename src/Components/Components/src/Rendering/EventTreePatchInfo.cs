@@ -18,5 +18,10 @@ namespace Microsoft.AspNetCore.Components.Rendering
         /// Specifies the name of the attribute that corresponds to the form field's mutated value.
         /// </summary>
         public string AttributeName { get; set; }
+
+        /// <summary>
+        /// Specifies the form field's mutated value.
+        /// </summary>
+        public object AttributeValue { get; set; }
     }
 }
