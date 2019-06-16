@@ -116,7 +116,7 @@ namespace Microsoft.AspNetCore.Blazor.Rendering
         }
 
         /// <inheritdoc />
-        public override Task DispatchEventAsync(int eventHandlerId, UIEventArgs eventArgs)
+        public override Task DispatchEventAsync(int eventHandlerId, EventTreePatchInfo treePatchInfo, UIEventArgs eventArgs)
         {
             // Be sure we only run one event handler at once. Although they couldn't run
             // simultaneously anyway (there's only one thread), they could run nested on
@@ -135,7 +135,7 @@ namespace Microsoft.AspNetCore.Blazor.Rendering
 
             if (isDispatchingEvent)
             {
-                var info = new IncomingEventInfo(eventHandlerId, eventArgs);
+                var info = new IncomingEventInfo(eventHandlerId, treePatchInfo, eventArgs);
                 deferredIncomingEvents.Enqueue(info);
                 return info.TaskCompletionSource.Task;
             }
@@ -144,7 +144,7 @@ namespace Microsoft.AspNetCore.Blazor.Rendering
                 try
                 {
                     isDispatchingEvent = true;
-                    return base.DispatchEventAsync(eventHandlerId, eventArgs);
+                    return base.DispatchEventAsync(eventHandlerId, treePatchInfo, eventArgs);
                 }
                 finally
                 {
@@ -168,7 +168,7 @@ namespace Microsoft.AspNetCore.Blazor.Rendering
 
             try
             {
-                await DispatchEventAsync(info.EventHandlerId, info.EventArgs);
+                await DispatchEventAsync(info.EventHandlerId, info.TreePatchInfo, info.EventArgs);
                 taskCompletionSource.SetResult(null);
             }
             catch (Exception ex)
@@ -180,12 +180,14 @@ namespace Microsoft.AspNetCore.Blazor.Rendering
         readonly struct IncomingEventInfo
         {
             public readonly int EventHandlerId;
+            public readonly EventTreePatchInfo TreePatchInfo;
             public readonly UIEventArgs EventArgs;
             public readonly TaskCompletionSource<object> TaskCompletionSource;
 
-            public IncomingEventInfo(int eventHandlerId, UIEventArgs eventArgs)
+            public IncomingEventInfo(int eventHandlerId, EventTreePatchInfo treePatchInfo, UIEventArgs eventArgs)
             {
                 EventHandlerId = eventHandlerId;
+                TreePatchInfo = treePatchInfo;
                 EventArgs = eventArgs;
                 TaskCompletionSource = new TaskCompletionSource<object>();
             }

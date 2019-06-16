@@ -205,11 +205,12 @@ namespace Microsoft.AspNetCore.Components.Rendering
         /// </summary>
         /// <param name="eventHandlerId">The <see cref="RenderTreeFrame.AttributeEventHandlerId"/> value from the original event attribute.</param>
         /// <param name="eventArgs">Arguments to be passed to the event handler.</param>
+        /// <param name="treePatchInfo">Information that the renderer can use to update the state of the existing render tree to match the UI.</param>
         /// <returns>
         /// A <see cref="Task"/> which will complete once all asynchronous processing related to the event
         /// has completed.
         /// </returns>
-        public virtual Task DispatchEventAsync(int eventHandlerId, UIEventArgs eventArgs)
+        public virtual Task DispatchEventAsync(int eventHandlerId, EventTreePatchInfo treePatchInfo, UIEventArgs eventArgs)
         {
             EnsureSynchronizationContext();
 
