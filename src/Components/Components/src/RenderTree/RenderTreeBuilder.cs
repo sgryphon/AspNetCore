@@ -690,6 +690,19 @@ namespace Microsoft.AspNetCore.Components.RenderTree
             _seenAttributeNames?.Clear();
         }
 
+        // internal because this should only be used during the post-event tree patching logic
+        // It's expensive because it involves copying all the subsequent memory in the array
+        internal void InsertAttributeExpensive(int insertAtIndex, string attributeName, object attributeValue)
+        {
+            // Replicate the same attribute omission logic as used elsewhere
+            if ((attributeValue == null) || (attributeValue is bool boolValue && !boolValue))
+            {
+                return;
+            }
+
+            _entries.InsertExpensive(insertAtIndex, RenderTreeFrame.Attribute(0, attributeName, attributeValue));
+        }
+
         /// <summary>
         /// Returns the <see cref="RenderTreeFrame"/> values that have been appended.
         /// </summary>

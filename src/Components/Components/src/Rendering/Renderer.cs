@@ -221,7 +221,7 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
             if (treePatchInfo != null)
             {
-                UpdateRenderTreeToMatchClientState(eventHandlerId, treePatchInfo, eventArgs);
+                UpdateRenderTreeToMatchClientState(eventHandlerId, treePatchInfo);
             }
 
             Task task = null;
@@ -668,13 +668,16 @@ namespace Microsoft.AspNetCore.Components.Rendering
             }
         }
 
-        private void UpdateRenderTreeToMatchClientState(int eventHandlerId, EventTreePatchInfo treePatchInfo, UIEventArgs eventArgs)
+        private void UpdateRenderTreeToMatchClientState(int eventHandlerId, EventTreePatchInfo treePatchInfo)
         {
             var componentState = GetOptionalComponentState(treePatchInfo.ComponentId);
             if (componentState != null)
             {
-                var frames = componentState.CurrrentRenderTree.GetFrames();
-                RenderTreeUpdater.UpdateToMatchClientState(frames, eventHandlerId, treePatchInfo.AttributeName, treePatchInfo.AttributeValue);
+                RenderTreeUpdater.UpdateToMatchClientState(
+                    componentState.CurrrentRenderTree,
+                    eventHandlerId,
+                    treePatchInfo.AttributeName,
+                    treePatchInfo.AttributeValue);
             }
         }
 
