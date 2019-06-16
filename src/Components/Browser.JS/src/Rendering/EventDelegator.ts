@@ -1,5 +1,5 @@
 import { EventForDotNet, UIEventArgs } from './EventForDotNet';
-import { TreePatchArgs } from './TreePatchArgs';
+import { EventTreePatchInfo } from './EventTreePatchInfo';
 
 const nonBubblingEvents = toLookup([
   'abort',
@@ -22,7 +22,7 @@ const nonBubblingEvents = toLookup([
 ]);
 
 export interface OnEventCallback {
-  (event: Event, eventHandlerId: number, eventArgs: EventForDotNet<UIEventArgs>, treePatchArgs: TreePatchArgs | null): void;
+  (event: Event, eventHandlerId: number, eventArgs: EventForDotNet<UIEventArgs>, treePatchInfo: EventTreePatchInfo | null): void;
 }
 
 // Responsible for adding/removing the eventInfo on an expando property on DOM elements, and
@@ -98,8 +98,8 @@ export class EventDelegator {
           }
 
           const handlerInfo = handlerInfos[evt.type];
-          const treePatchArgs = TreePatchArgs.fromEvent(handlerInfo.renderingComponentId, evt);
-          this.onEvent(evt, handlerInfo.eventHandlerId, eventArgs, treePatchArgs);
+          const treePatchInfo = EventTreePatchInfo.fromEvent(handlerInfo.renderingComponentId, evt);
+          this.onEvent(evt, handlerInfo.eventHandlerId, eventArgs, treePatchInfo);
         }
       }
 

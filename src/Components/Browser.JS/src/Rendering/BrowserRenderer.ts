@@ -3,7 +3,7 @@ import { EventDelegator } from './EventDelegator';
 import { EventForDotNet, UIEventArgs } from './EventForDotNet';
 import { LogicalElement, PermutationListEntry, toLogicalElement, insertLogicalChild, removeLogicalChild, getLogicalParent, getLogicalChild, createAndInsertLogicalContainer, isSvgElement, getLogicalChildrenArray, getLogicalSiblingEnd, permuteLogicalChildren, getClosestDomElement } from './LogicalElements';
 import { applyCaptureIdToElement } from './ElementReferenceCapture';
-import { TreePatchArgs } from './TreePatchArgs';
+import { EventTreePatchInfo } from './EventTreePatchInfo';
 const selectValuePropname = '_blazorSelectValue';
 const sharedTemplateElemForParsing = document.createElement('template');
 const sharedSvgElemForParsing = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -19,8 +19,8 @@ export class BrowserRenderer {
 
   public constructor(browserRendererId: number) {
     this.browserRendererId = browserRendererId;
-    this.eventDelegator = new EventDelegator((event, eventHandlerId, eventArgs, treePatchArgs) => {
-      raiseEvent(event, this.browserRendererId, eventHandlerId, eventArgs, treePatchArgs);
+    this.eventDelegator = new EventDelegator((event, eventHandlerId, eventArgs, treePatchInfo) => {
+      raiseEvent(event, this.browserRendererId, eventHandlerId, eventArgs, treePatchInfo);
     });
   }
 
@@ -398,7 +398,7 @@ function countDescendantFrames(batch: RenderBatch, frame: RenderTreeFrame): numb
   }
 }
 
-function raiseEvent(event: Event, browserRendererId: number, eventHandlerId: number, eventArgs: EventForDotNet<UIEventArgs>, treePatchArgs: TreePatchArgs | null) {
+function raiseEvent(event: Event, browserRendererId: number, eventHandlerId: number, eventArgs: EventForDotNet<UIEventArgs>, treePatchInfo: EventTreePatchInfo | null) {
   if (preventDefaultEvents[event.type]) {
     event.preventDefault();
   }
@@ -407,7 +407,7 @@ function raiseEvent(event: Event, browserRendererId: number, eventHandlerId: num
     browserRendererId,
     eventHandlerId,
     eventArgsType: eventArgs.type,
-    treePatchArgs,
+    treePatchInfo,
   };
 
   return DotNet.invokeMethodAsync(
