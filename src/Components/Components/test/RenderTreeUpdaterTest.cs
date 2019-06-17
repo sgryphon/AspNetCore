@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Components.Test.Helpers;
@@ -29,8 +30,10 @@ namespace Microsoft.AspNetCore.Components.Test
             RenderTreeUpdater.UpdateToMatchClientState(builder, 456, valuePropName, "new value");
 
             // Assert
-            Assert.Equal(3, frames.Count);
-            Assert.Equal("initial value", frames.Array[2].AttributeValue);
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "elem", 3, 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1),
+                frame => AssertFrame.Attribute(frame, valuePropName, "initial value", 2));
         }
 
         [Fact]
@@ -58,10 +61,15 @@ namespace Microsoft.AspNetCore.Components.Test
             RenderTreeUpdater.UpdateToMatchClientState(builder, 456, valuePropName, "new value");
 
             // Assert
-            Assert.Equal("unchanged 1", frames.Array[2].AttributeValue);
-            Assert.Equal("unchanged 2", frames.Array[5].AttributeValue);
-            Assert.Equal("new value", frames.Array[6].AttributeValue);
-            Assert.Equal("unchanged 3", frames.Array[7].AttributeValue);
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "elem", 3, 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1),
+                frame => AssertFrame.Attribute(frame, valuePropName, "unchanged 1", 2),
+                frame => AssertFrame.Element(frame, "elem", 5, 3),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 4),
+                frame => AssertFrame.Attribute(frame, "unrelated prop before", "unchanged 2", 5),
+                frame => AssertFrame.Attribute(frame, valuePropName, "new value", 6),
+                frame => AssertFrame.Attribute(frame, "unrelated prop after", "unchanged 3", 7));
         }
 
         [Fact]
@@ -82,12 +90,10 @@ namespace Microsoft.AspNetCore.Components.Test
             frames = builder.GetFrames();
 
             // Assert
-            Assert.Equal(3, frames.Count);
-            Assert.Equal(3, frames.Array[0].ElementSubtreeLength);
-            Assert.Equal(valuePropName, frames.Array[1].AttributeName);
-            Assert.Equal("new value", frames.Array[1].AttributeValue);
-            Assert.Equal("eventname", frames.Array[2].AttributeName);
-            Assert.IsType<Action>(frames.Array[2].AttributeValue);
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "elem", 3, 0),
+                frame => AssertFrame.Attribute(frame, valuePropName, "new value", 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1));
         }
 
         [Fact]
