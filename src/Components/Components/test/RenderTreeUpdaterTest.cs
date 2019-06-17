@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Linq;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Components.Test.Helpers;
@@ -99,7 +98,34 @@ namespace Microsoft.AspNetCore.Components.Test
         [Fact]
         public void ExpandsAllAncestorsWhenAddingAttribute()
         {
+            // Arrange
+            var valuePropName = "testprop";
+            var renderer = new TestRenderer();
+            var builder = new RenderTreeBuilder(renderer);
+            builder.OpenElement(0, "grandparent");
+            builder.OpenRegion(1);
+            builder.OpenElement(2, "sibling before"); // To show that non-ancestors aren't expanded
+            builder.CloseElement();
+            builder.OpenElement(3, "elem with handler");
+            builder.AddAttribute(4, "eventname", () => { });
+            builder.CloseElement(); // elem with handler
+            builder.CloseRegion();
+            builder.CloseElement(); // grandparent
+            var frames = builder.GetFrames();
+            frames.Array[4] = frames.Array[4].WithAttributeEventHandlerId(123);
 
+            // Act
+            RenderTreeUpdater.UpdateToMatchClientState(builder, 123, valuePropName, "new value");
+            frames = builder.GetFrames();
+
+            // Assert
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "grandparent", 6, 0),
+                frame => AssertFrame.Region(frame, 5, 1),
+                frame => AssertFrame.Element(frame, "sibling before", 1, 2),
+                frame => AssertFrame.Element(frame, "elem with handler", 3, 3),
+                frame => AssertFrame.Attribute(frame, valuePropName, "new value", 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 4));
         }
 
         private static ArrayRange<RenderTreeFrame> BuildFrames(params RenderTreeFrame[] frames)

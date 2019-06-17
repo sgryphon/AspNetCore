@@ -59,9 +59,36 @@ namespace Microsoft.AspNetCore.Components.Rendering
             var insertAtIndex = elementFrameIndex + 1;
             renderTreeBuilder.InsertAttributeExpensive(insertAtIndex, attributeName, attributeValue);
 
-            // Update subtree length
-            // TODO: Also update ancestors' subtree lengths
-            elementFrame = elementFrame.WithElementSubtreeLength(elementFrame.ElementSubtreeLength + 1);
+            // Update subtree length for this and all ancestor containers
+            // Ancestors can only be regions or other elements, since components can't "contain" elements inline
+            // We only have to walk backwards, since later entries in the frames array can't contain an earlier one
+            for (var otherFrameIndex = elementFrameIndex; otherFrameIndex >= 0; otherFrameIndex--)
+            {
+                ref var otherFrame = ref framesArray[otherFrameIndex];
+                switch (otherFrame.FrameType)
+                {
+                    case RenderTreeFrameType.Element:
+                        {
+                            var otherFrameSubtreeLength = otherFrame.ElementSubtreeLength;
+                            var otherFrameEndIndexExcl = otherFrameIndex + otherFrameSubtreeLength;
+                            if (otherFrameEndIndexExcl > elementFrameIndex) // i.e., contains the element we're inserting into
+                            {
+                                otherFrame = otherFrame.WithElementSubtreeLength(otherFrameSubtreeLength + 1);
+                            }
+                            break;
+                        }
+                    case RenderTreeFrameType.Region:
+                        {
+                            var otherFrameSubtreeLength = otherFrame.RegionSubtreeLength;
+                            var otherFrameEndIndexExcl = otherFrameIndex + otherFrameSubtreeLength;
+                            if (otherFrameEndIndexExcl > elementFrameIndex) // i.e., contains the element we're inserting into
+                            {
+                                otherFrame = otherFrame.WithRegionSubtreeLength(otherFrameSubtreeLength + 1);
+                            }
+                            break;
+                        }
+                }
+            }
         }
     }
 }
