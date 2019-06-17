@@ -375,9 +375,15 @@ try {
     if ($ForceCoreMsbuild) {
         $global:KoreBuildSettings.MSBuildType = 'core'
     }
+
+    if ($CI) {
+        $global:VerbosePreference = 'Continue'
+    }
+
     Invoke-KoreBuildCommand 'default-build' @MSBuildArguments
 }
 finally {
+    $local:exit_code = $LASTEXITCODE
     Remove-Module 'KoreBuild' -ErrorAction Ignore
     Remove-Item env:DOTNET_HOME
     Remove-Item env:KOREBUILD_KEEPGLOBALJSON
@@ -393,4 +399,5 @@ finally {
     }
 
     Write-Host "build.ps1 completed"
+    exit $exit_code
 }
