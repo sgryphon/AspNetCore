@@ -11,11 +11,6 @@ namespace Microsoft.AspNetCore.Components.RenderTree
     {
         enum DiffAction { Match, Insert, Delete }
 
-        // We use int.MinValue to signal this special case because (1) it would never be used by
-        // the Razor compiler or by accident in developer code, and (2) we know it will always
-        // hit the "old < new" code path during diffing so we only have to check for it in one place.
-        public const int SystemAddedAttributeSequenceNumber = int.MinValue;
-
         public static RenderTreeDiff ComputeDiff(
             Renderer renderer,
             RenderBatchBuilder batchBuilder,
@@ -387,21 +382,6 @@ namespace Microsoft.AspNetCore.Components.RenderTree
                 }
                 else if (oldSeq < newSeq)
                 {
-                    if (oldSeq == SystemAddedAttributeSequenceNumber)
-                    {
-                        // This special sequence number means that we can't rely on the sequence numbers
-                        // for matching and are forced to fall back on the dictionary-based join in order
-                        // to produce an optimal diff. If we didn't we'd likely produce a diff that removes
-                        // and then re-adds the same attribute.
-                        // We use the special sequence number to signal it because it adds almost no cost
-                        // to check for it only in this one case.
-                        AppendAttributeDiffEntriesForRangeSlow(
-                            ref diffContext,
-                            oldStartIndex, oldEndIndexExcl,
-                            newStartIndex, newEndIndexExcl);
-                        return;
-                    }
-
                     // An attribute was removed compared to the old sequence.
                     RemoveOldFrame(ref diffContext, oldStartIndex);
 

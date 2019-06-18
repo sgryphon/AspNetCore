@@ -66,41 +66,14 @@ namespace Microsoft.AspNetCore.Components.Rendering
                 }
             }
 
-            // If we get here, we didn't find the desired attribute, so we have to insert a new frame for it
-            var insertAtIndex = elementFrameIndex + 1;
-            renderTreeBuilder.InsertAttributeExpensive(insertAtIndex, RenderTreeDiffBuilder.SystemAddedAttributeSequenceNumber, attributeName, attributeValue);
-            framesArray = renderTreeBuilder.GetFrames().Array; // Refresh in case it mutated due to the expansion
-
-            // Update subtree length for this and all ancestor containers
-            // Ancestors can only be regions or other elements, since components can't "contain" elements inline
-            // We only have to walk backwards, since later entries in the frames array can't contain an earlier one
-            for (var otherFrameIndex = elementFrameIndex; otherFrameIndex >= 0; otherFrameIndex--)
-            {
-                ref var otherFrame = ref framesArray[otherFrameIndex];
-                switch (otherFrame.FrameType)
-                {
-                    case RenderTreeFrameType.Element:
-                        {
-                            var otherFrameSubtreeLength = otherFrame.ElementSubtreeLength;
-                            var otherFrameEndIndexExcl = otherFrameIndex + otherFrameSubtreeLength;
-                            if (otherFrameEndIndexExcl > elementFrameIndex) // i.e., contains the element we're inserting into
-                            {
-                                otherFrame = otherFrame.WithElementSubtreeLength(otherFrameSubtreeLength + 1);
-                            }
-                            break;
-                        }
-                    case RenderTreeFrameType.Region:
-                        {
-                            var otherFrameSubtreeLength = otherFrame.RegionSubtreeLength;
-                            var otherFrameEndIndexExcl = otherFrameIndex + otherFrameSubtreeLength;
-                            if (otherFrameEndIndexExcl > elementFrameIndex) // i.e., contains the element we're inserting into
-                            {
-                                otherFrame = otherFrame.WithRegionSubtreeLength(otherFrameSubtreeLength + 1);
-                            }
-                            break;
-                        }
-                }
-            }
+            // If we get here, we didn't find the desired attribute
+            // We do *not* insert the attribute to force the render tree into sync with the UI, because that
+            // would make one-way binding impossible. For example, a textbox with only "onchange" (and not "value")
+            // would keep clearing itself after each edit to keep things in sync.
+            // To preserve the ability to do one-way bindings (in the UI->Component direction), we interpret
+            // the absence of a corresponding value attribute as meaning the tree should not be updated.
+            // This means we have to stop omitting attribute rendering for attributes that represent a "value"
+            // in a possible two-way binding. This will be a future enhancement.
         }
     }
 }
