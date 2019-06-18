@@ -3274,7 +3274,7 @@ namespace Microsoft.AspNetCore.Components.Test
         [Theory]
         [InlineData(null)] // No existing attribute to update
         [InlineData("old property value")] // Has existing attribute to update
-        public void EventTreePatchInfoCanPatchTreeSoDiffIsBlank(string oldValue)
+        public void EventTreePatchInfoCanPatchTreeSoDiffDoesNotUpdateAttribute(string oldValue)
         {
             // Arrange: Render a component with an event handler
             var renderer = new TestRenderer();
@@ -3294,18 +3294,82 @@ namespace Microsoft.AspNetCore.Components.Test
                 AttributeValue = "new property value",
                 ComponentId = componentId
             };
-            var renderTask = renderer.DispatchEventAsync(eventHandlerId, treePatchInfo, new UIChangeEventArgs
+            var dispatchEventTask = renderer.DispatchEventAsync(eventHandlerId, treePatchInfo, new UIChangeEventArgs
             {
                 Value = "new property value"
             });
-            Assert.True(renderTask.IsCompletedSuccessfully);
+            Assert.True(dispatchEventTask.IsCompletedSuccessfully);
 
             // Assert: Property was updated, but the diff doesn't include changing the
             // element attribute, since we told it the element attribute was already updated
             Assert.Equal("new property value", component.BoundString);
             Assert.Equal(2, renderer.Batches.Count);
             var batch2 = renderer.Batches[1];
-            Assert.Empty(batch2.DiffsInOrder.Single().Edits.ToArray());
+            Assert.Collection(batch2.DiffsInOrder.Single().Edits.ToArray(), edit =>
+            {
+                // The only edit is updating the event handler ID, since the test component
+                // deliberately uses a capturing lambda. The whole point of this test is to
+                // show that the diff does *not* update the BoundString value attribute.
+                Assert.Equal(RenderTreeEditType.SetAttribute, edit.Type);
+                var attributeFrame = batch2.ReferenceFrames[edit.ReferenceFrameIndex];
+                AssertFrame.Attribute(attributeFrame, "ontestevent", typeof(Action<UIChangeEventArgs>));
+                Assert.NotEqual(0, attributeFrame.AttributeEventHandlerId);
+                Assert.NotEqual(eventHandlerId, attributeFrame.AttributeEventHandlerId);
+            });
+        }
+
+        [Fact]
+        public void EventTreePatchInfoWorksWhenEventHandlerIdWasSuperseded()
+        {
+            // Arrange: Render a component with an event handler
+            // We want the renderer to think none of the "UpdateDisplay" calls ever complete, because we
+            // want to keep reusing the same eventHandlerId and not let it get disposed
+            var renderCompletedTcs = new TaskCompletionSource<object>();
+            var renderer = new TestRenderer { NextRenderResultTask = renderCompletedTcs.Task };
+            var component = new BoundPropertyComponent { BoundString = "old property value" };
+            var componentId = renderer.AssignRootComponentId(component);
+
+            component.TriggerRender();
+
+            var eventHandlerId = renderer.Batches.Single()
+                .ReferenceFrames
+                .First(frame => frame.FrameType == RenderTreeFrameType.Attribute && frame.AttributeEventHandlerId > 0)
+                .AttributeEventHandlerId;
+
+            // Act: Fire event and re-render *repeatedly*, without changing to use a newer event handler ID,
+            // even though we know the event handler ID is getting updated in successive diffs
+            for (var i = 0; i < 10; i++)
+            {
+                var newPropertyValue = $"new property value {i}";
+                var treePatchInfo = new EventTreePatchInfo
+                {
+                    AttributeName = nameof(BoundPropertyComponent.BoundString),
+                    AttributeValue = newPropertyValue,
+                    ComponentId = componentId
+                };
+                var dispatchEventTask = renderer.DispatchEventAsync(eventHandlerId, treePatchInfo, new UIChangeEventArgs
+                {
+                    Value = newPropertyValue
+                });
+                Assert.True(dispatchEventTask.IsCompletedSuccessfully);
+
+                // Assert: Property was updated, but the diff doesn't include changing the
+                // element attribute, since we told it the element attribute was already updated
+                Assert.Equal(newPropertyValue, component.BoundString);
+                Assert.Equal(i + 2, renderer.Batches.Count);
+                var latestBatch = renderer.Batches.Last();
+                Assert.Collection(latestBatch.DiffsInOrder.Single().Edits.ToArray(), edit =>
+                {
+                    // The only edit is updating the event handler ID, since the test component
+                    // deliberately uses a capturing lambda. The whole point of this test is to
+                    // show that the diff does *not* update the BoundString value attribute.
+                    Assert.Equal(RenderTreeEditType.SetAttribute, edit.Type);
+                    var attributeFrame = latestBatch.ReferenceFrames[edit.ReferenceFrameIndex];
+                    AssertFrame.Attribute(attributeFrame, "ontestevent", typeof(Action<UIChangeEventArgs>));
+                    Assert.NotEqual(0, attributeFrame.AttributeEventHandlerId);
+                    Assert.NotEqual(eventHandlerId, attributeFrame.AttributeEventHandlerId);
+                });
+            }
         }
 
         private class NoOpRenderer : Renderer
@@ -4003,12 +4067,15 @@ namespace Microsoft.AspNetCore.Components.Test
 
             protected override void BuildRenderTree(RenderTreeBuilder builder)
             {
+                var unrelatedThingToMakeTheLambdaCapture = new object();
+
                 builder.OpenElement(0, "element with event");
                 builder.AddAttribute(1, nameof(BoundString), BoundString);
                 builder.AddAttribute(2, "ontestevent", (UIChangeEventArgs eventArgs) =>
                 {
                     BoundString = (string)eventArgs.Value;
                     TriggerRender();
+                    GC.KeepAlive(unrelatedThingToMakeTheLambdaCapture);
                 });
                 builder.CloseElement();
             }

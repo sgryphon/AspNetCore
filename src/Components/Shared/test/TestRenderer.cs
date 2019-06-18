@@ -38,6 +38,8 @@ namespace Microsoft.AspNetCore.Components.Test.Helpers
 
         public bool ShouldHandleExceptions { get; set; }
 
+        public Task NextRenderResultTask { get; set; } = Task.CompletedTask;
+
         public new int AssignRootComponentId(IComponent component)
             => base.AssignRootComponentId(component);
 
@@ -112,7 +114,7 @@ namespace Microsoft.AspNetCore.Components.Test.Helpers
             // To test async UI updates, subclass TestRenderer and override UpdateDisplayAsync.
 
             OnUpdateDisplayComplete?.Invoke();
-            return Task.CompletedTask;
+            return NextRenderResultTask;
         }
     }
 }
