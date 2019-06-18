@@ -36,6 +36,56 @@ namespace Microsoft.AspNetCore.Components.Test
         }
 
         [Fact]
+        public void IgnoresUpdatesToAttributesWithEventHandlerId()
+        {
+            // There's just no reason to allow the client to make this kind of update, so block it
+
+            // Arrange
+            var renderer = new TestRenderer();
+            var builder = new RenderTreeBuilder(renderer);
+            builder.OpenElement(0, "elem");
+            builder.AddAttribute(1, "eventname", () => { });
+            builder.CloseElement();
+            var frames = builder.GetFrames();
+            frames.Array[1] = frames.Array[1].WithAttributeEventHandlerId(123); // An unrelated event
+
+            // Act
+            RenderTreeUpdater.UpdateToMatchClientState(builder, 123, "eventname", "new value");
+
+            // Assert
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "elem", 2, 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1));
+        }
+
+        [Fact]
+        public void IgnoresUpdatesToAttributesIfUnexpectedValueTypeSupplied()
+        {
+            // Currently we only allow the client to supply a string or a bool, since those are the
+            // only types of values we render onto attributes
+
+            // Arrange
+            var valuePropName = "testprop";
+            var renderer = new TestRenderer();
+            var builder = new RenderTreeBuilder(renderer);
+            builder.OpenElement(0, "elem");
+            builder.AddAttribute(1, "eventname", () => { });
+            builder.AddAttribute(2, valuePropName, "initial value");
+            builder.CloseElement();
+            var frames = builder.GetFrames();
+            frames.Array[1] = frames.Array[1].WithAttributeEventHandlerId(123); // An unrelated event
+
+            // Act
+            RenderTreeUpdater.UpdateToMatchClientState(builder, 123, valuePropName, new object());
+
+            // Assert
+            Assert.Collection(frames.AsEnumerable(),
+                frame => AssertFrame.Element(frame, "elem", 3, 0),
+                frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1),
+                frame => AssertFrame.Attribute(frame, valuePropName, "initial value", 2));
+        }
+
+        [Fact]
         public void UpdatesOnlyMatchingAttributeValue()
         {
             // Arrange

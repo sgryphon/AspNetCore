@@ -9,6 +9,13 @@ namespace Microsoft.AspNetCore.Components.Rendering
     {
         public static void UpdateToMatchClientState(RenderTreeBuilder renderTreeBuilder, int eventHandlerId, string attributeName, object attributeValue)
         {
+            // We only allow the client to supply string or bool currently, since those are the only kinds of
+            // values we output on attributes that go to the client
+            if (!(attributeValue is string || attributeValue is bool))
+            {
+                return;
+            }
+
             // Find the element that contains the event handler
             var frames = renderTreeBuilder.GetFrames();
             var framesArray = frames.Array;
@@ -49,8 +56,12 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
                 if (attributeFrame.AttributeName == attributeName)
                 {
-                    // Found an existing attribute we can update
-                    attributeFrame = attributeFrame.WithAttributeValue(attributeValue);
+                    // Found an existing attribute we can update, as long as it really is just a simple
+                    // attribute and not a special one (event handler)
+                    if (attributeFrame.AttributeEventHandlerId == 0)
+                    {
+                        attributeFrame = attributeFrame.WithAttributeValue(attributeValue);
+                    }
                     return;
                 }
             }
