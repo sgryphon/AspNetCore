@@ -20,6 +20,7 @@ namespace Microsoft.AspNetCore.Components.Rendering
         private readonly Dictionary<int, ComponentState> _componentStateById = new Dictionary<int, ComponentState>();
         private readonly RenderBatchBuilder _batchBuilder = new RenderBatchBuilder();
         private readonly Dictionary<int, EventCallback> _eventBindings = new Dictionary<int, EventCallback>();
+        private readonly Dictionary<int, int> _eventHandlerIdReplacements = new Dictionary<int, int>();
         private readonly IDispatcher _dispatcher;
 
         private int _nextComponentId = 0; // TODO: change to 'long' when Mono .NET->JS interop supports it
@@ -221,7 +222,8 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
             if (treePatchInfo != null)
             {
-                UpdateRenderTreeToMatchClientState(eventHandlerId, treePatchInfo);
+                var latestEquivalentEventHandlerId = FindLatestEventHandlerIdInChain(eventHandlerId);
+                UpdateRenderTreeToMatchClientState(latestEquivalentEventHandlerId, treePatchInfo);
             }
 
             Task task = null;
@@ -405,6 +407,24 @@ namespace Microsoft.AspNetCore.Components.Rendering
             {
                 ProcessRenderQueue();
             }
+        }
+
+        internal void TrackReplacedEventHandlerId(int oldEventHandlerId, int newEventHandlerId)
+        {
+            // Tracking the chain of old->new replacements allows us to interpret incoming EventTreePatchInfo
+            // values even if they refer to an event handler ID that's since been superseded. This is essential
+            // for tree patching to work in an async environment.
+            _eventHandlerIdReplacements.Add(oldEventHandlerId, newEventHandlerId);
+        }
+
+        private int FindLatestEventHandlerIdInChain(int eventHandlerId)
+        {
+            while (_eventHandlerIdReplacements.TryGetValue(eventHandlerId, out var replacementEventHandlerId))
+            {
+                eventHandlerId = replacementEventHandlerId;
+            }
+
+            return eventHandlerId;
         }
 
         private void EnsureSynchronizationContext()
@@ -619,7 +639,9 @@ namespace Microsoft.AspNetCore.Components.Rendering
                 var count = eventHandlerIds.Count;
                 for (var i = 0; i < count; i++)
                 {
-                    _eventBindings.Remove(array[i]);
+                    var eventHandlerIdToRemove = array[i];
+                    _eventBindings.Remove(eventHandlerIdToRemove);
+                    _eventHandlerIdReplacements.Remove(eventHandlerIdToRemove);
                 }
             }
             else

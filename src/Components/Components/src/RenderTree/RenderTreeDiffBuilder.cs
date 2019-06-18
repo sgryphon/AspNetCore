@@ -681,13 +681,17 @@ namespace Microsoft.AspNetCore.Components.RenderTree
             var valueChanged = !Equals(oldFrame.AttributeValue, newFrame.AttributeValue);
             if (valueChanged)
             {
-                if (oldFrame.AttributeEventHandlerId > 0)
-                {
-                    diffContext.BatchBuilder.DisposedEventHandlerIds.Append(oldFrame.AttributeEventHandlerId);
-                }
                 InitializeNewAttributeFrame(ref diffContext, ref newFrame);
                 var referenceFrameIndex = diffContext.ReferenceFrames.Append(newFrame);
                 diffContext.Edits.Append(RenderTreeEdit.SetAttribute(diffContext.SiblingIndex, referenceFrameIndex));
+
+                // If we're replacing an old event handler ID with a new one, register the old one for disposal,
+                // plus keep track of the old->new chain until the old one is fully disposed
+                if (oldFrame.AttributeEventHandlerId > 0)
+                {
+                    diffContext.Renderer.TrackReplacedEventHandlerId(oldFrame.AttributeEventHandlerId, newFrame.AttributeEventHandlerId);
+                    diffContext.BatchBuilder.DisposedEventHandlerIds.Append(oldFrame.AttributeEventHandlerId);
+                }
             }
             else if (oldFrame.AttributeEventHandlerId > 0)
             {
