@@ -692,7 +692,7 @@ namespace Microsoft.AspNetCore.Components.RenderTree
 
         // internal because this should only be used during the post-event tree patching logic
         // It's expensive because it involves copying all the subsequent memory in the array
-        internal void InsertAttributeExpensive(int insertAtIndex, string attributeName, object attributeValue)
+        internal void InsertAttributeExpensive(int insertAtIndex, int sequence, string attributeName, object attributeValue)
         {
             // Replicate the same attribute omission logic as used elsewhere
             if ((attributeValue == null) || (attributeValue is bool boolValue && !boolValue))
@@ -700,7 +700,7 @@ namespace Microsoft.AspNetCore.Components.RenderTree
                 return;
             }
 
-            _entries.InsertExpensive(insertAtIndex, RenderTreeFrame.Attribute(0, attributeName, attributeValue));
+            _entries.InsertExpensive(insertAtIndex, RenderTreeFrame.Attribute(sequence, attributeName, attributeValue));
         }
 
         /// <summary>

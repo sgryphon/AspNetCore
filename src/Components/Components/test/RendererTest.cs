@@ -3271,6 +3271,43 @@ namespace Microsoft.AspNetCore.Components.Test
             Assert.Contains(exception2, renderer.HandledExceptions);
         }
 
+        [Theory]
+        [InlineData(null)] // No existing attribute to update
+        [InlineData("old property value")] // Has existing attribute to update
+        public void EventTreePatchInfoCanPatchTreeSoDiffIsBlank(string oldValue)
+        {
+            // Arrange: Render a component with an event handler
+            var renderer = new TestRenderer();
+            var component = new BoundPropertyComponent { BoundString = oldValue };
+            var componentId = renderer.AssignRootComponentId(component);
+            component.TriggerRender();
+
+            var eventHandlerId = renderer.Batches.Single()
+                .ReferenceFrames
+                .First(frame => frame.FrameType == RenderTreeFrameType.Attribute && frame.AttributeEventHandlerId > 0)
+                .AttributeEventHandlerId;
+
+            // Act: Fire event and re-render
+            var treePatchInfo = new EventTreePatchInfo
+            {
+                AttributeName = nameof(BoundPropertyComponent.BoundString),
+                AttributeValue = "new property value",
+                ComponentId = componentId
+            };
+            var renderTask = renderer.DispatchEventAsync(eventHandlerId, treePatchInfo, new UIChangeEventArgs
+            {
+                Value = "new property value"
+            });
+            Assert.True(renderTask.IsCompletedSuccessfully);
+
+            // Assert: Property was updated, but the diff doesn't include changing the
+            // element attribute, since we told it the element attribute was already updated
+            Assert.Equal("new property value", component.BoundString);
+            Assert.Equal(2, renderer.Batches.Count);
+            var batch2 = renderer.Batches[1];
+            Assert.Empty(batch2.DiffsInOrder.Single().Edits.ToArray());
+        }
+
         private class NoOpRenderer : Renderer
         {
             public NoOpRenderer() : base(new TestServiceProvider(), new RendererSynchronizationContext())
@@ -3956,6 +3993,23 @@ namespace Microsoft.AspNetCore.Components.Test
             protected override void BuildRenderTree(RenderTreeBuilder builder)
             {
                 builder.OpenElement(0, "p");
+                builder.CloseElement();
+            }
+        }
+
+        class BoundPropertyComponent : AutoRenderComponent
+        {
+            public string BoundString { get; set; }
+
+            protected override void BuildRenderTree(RenderTreeBuilder builder)
+            {
+                builder.OpenElement(0, "element with event");
+                builder.AddAttribute(1, nameof(BoundString), BoundString);
+                builder.AddAttribute(2, "ontestevent", (UIChangeEventArgs eventArgs) =>
+                {
+                    BoundString = (string)eventArgs.Value;
+                    TriggerRender();
+                });
                 builder.CloseElement();
             }
         }

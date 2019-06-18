@@ -68,7 +68,7 @@ namespace Microsoft.AspNetCore.Components.Rendering
 
             // If we get here, we didn't find the desired attribute, so we have to insert a new frame for it
             var insertAtIndex = elementFrameIndex + 1;
-            renderTreeBuilder.InsertAttributeExpensive(insertAtIndex, attributeName, attributeValue);
+            renderTreeBuilder.InsertAttributeExpensive(insertAtIndex, RenderTreeDiffBuilder.SystemAddedAttributeSequenceNumber, attributeName, attributeValue);
 
             // Update subtree length for this and all ancestor containers
             // Ancestors can only be regions or other elements, since components can't "contain" elements inline

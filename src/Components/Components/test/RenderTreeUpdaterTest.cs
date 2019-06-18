@@ -141,7 +141,7 @@ namespace Microsoft.AspNetCore.Components.Test
             // Assert
             Assert.Collection(frames.AsEnumerable(),
                 frame => AssertFrame.Element(frame, "elem", 3, 0),
-                frame => AssertFrame.Attribute(frame, valuePropName, "new value", 0),
+                frame => AssertFrame.Attribute(frame, valuePropName, "new value", RenderTreeDiffBuilder.SystemAddedAttributeSequenceNumber),
                 frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 1));
         }
 
@@ -174,7 +174,7 @@ namespace Microsoft.AspNetCore.Components.Test
                 frame => AssertFrame.Region(frame, 5, 1),
                 frame => AssertFrame.Element(frame, "sibling before", 1, 2),
                 frame => AssertFrame.Element(frame, "elem with handler", 3, 3),
-                frame => AssertFrame.Attribute(frame, valuePropName, "new value", 0),
+                frame => AssertFrame.Attribute(frame, valuePropName, "new value", RenderTreeDiffBuilder.SystemAddedAttributeSequenceNumber),
                 frame => AssertFrame.Attribute(frame, "eventname", v => Assert.IsType<Action>(v), 4));
         }
 
