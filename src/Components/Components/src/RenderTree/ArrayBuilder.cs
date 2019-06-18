@@ -119,8 +119,8 @@ namespace Microsoft.AspNetCore.Components.RenderTree
                 SetCapacity(_items.Length * 2, preserveContents: true);
             }
 
-            _itemsInUse++;
             Array.Copy(_items, insertAtIndex, _items, insertAtIndex + 1, _itemsInUse - insertAtIndex);
+            _itemsInUse++;
 
             _items[insertAtIndex] = value;
         }
