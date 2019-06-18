@@ -170,11 +170,13 @@ namespace Microsoft.AspNetCore.Components.RenderTree
             {
                 Append(RenderTreeFrame.Attribute(sequence, name, value ? BoxedTrue : BoxedFalse));
             }
-            else if (value)
+            else if (value || name == "checked")
             {
                 // Don't add 'false' attributes for elements. We want booleans to map to the presence
                 // or absence of an attribute, and false => "False" which isn't falsy in js.
-                Append(RenderTreeFrame.Attribute(sequence, name, BoxedTrue));
+                // As a temporary exception, "checked" is special-cased since its presence is how we
+                // know you may be doing a two-way binding. This may become a compiler feature later.
+                Append(RenderTreeFrame.Attribute(sequence, name, value ? BoxedTrue : BoxedFalse));
             }
             else
             {
@@ -196,8 +198,11 @@ namespace Microsoft.AspNetCore.Components.RenderTree
         /// <param name="value">The value of the attribute.</param>
         public void AddAttribute(int sequence, string name, string value)
         {
+            // Normally we omit null values.
+            // As a temporary exception, "value" is special-cased since its presence is how we
+            // know you may be doing a two-way binding. This may become a compiler feature later.
             AssertCanAddAttribute();
-            if (value != null || _lastNonAttributeFrameType == RenderTreeFrameType.Component)
+            if (value != null || _lastNonAttributeFrameType == RenderTreeFrameType.Component || name == "value")
             {
                 Append(RenderTreeFrame.Attribute(sequence, name, value));
             }
@@ -411,21 +416,23 @@ namespace Microsoft.AspNetCore.Components.RenderTree
             // types that AddAttribute special cases.
             if (_lastNonAttributeFrameType == RenderTreeFrameType.Element)
             {
-                if (value == null)
+                if (value == null && name != "value")
                 {
                     // Treat 'null' attribute values for elements as a conditional attribute.
+                    // As a temporary exception, "value" is special-cased since its presence is how we
+                    // know you may be doing a two-way binding. This may become a compiler feature later.
                     TrackAttributeName(name);
                 }
                 else if (value is bool boolValue)
                 {
-                    if (boolValue)
+                    if (!boolValue && name != "checked")
                     {
-                        Append(RenderTreeFrame.Attribute(sequence, name, BoxedTrue));
+                        // Don't add anything for false bool value, except the "checked" special case
+                        TrackAttributeName(name);
                     }
                     else
                     {
-                        // Don't add anything for false bool value.
-                        TrackAttributeName(name);
+                        Append(RenderTreeFrame.Attribute(sequence, name, boolValue ? BoxedTrue : BoxedFalse));
                     }
                 }
                 else if (value is IEventCallback callbackValue)
@@ -446,7 +453,7 @@ namespace Microsoft.AspNetCore.Components.RenderTree
                 else
                 {
                     // The value is either a string, or should be treated as a string.
-                    Append(RenderTreeFrame.Attribute(sequence, name, value.ToString()));
+                    Append(RenderTreeFrame.Attribute(sequence, name, value?.ToString()));
                 }
             }
             else if (_lastNonAttributeFrameType == RenderTreeFrameType.Component)
